@@ -1,6 +1,9 @@
 use crate::features::{ExecutionContext, Operation};
 use std::collections::HashMap;
 
+//TODO: Consider all variations and then write logic for Gene methods.
+//TODO: Test Expression logic for both functionality and recursive use cases.
+
 #[derive(Debug, Clone)]
 pub enum GeneType {
     Terminal(TerminalData),

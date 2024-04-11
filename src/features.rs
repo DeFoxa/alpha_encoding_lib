@@ -1,5 +1,8 @@
 use crate::data::types::*;
 
+//TODO: determine if we are going to locally build candles, if so write logic. or only work with
+//normalized data types. Could also write logic to handle both cases, make decision.
+
 pub trait Executable {
     fn execute(&self, context: &ExecutionContext) -> f64;
 }
