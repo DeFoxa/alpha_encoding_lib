@@ -1,5 +1,5 @@
 use crate::features::Operation;
-use anyhow::Result;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub enum GeneType {
@@ -29,16 +29,26 @@ struct FunctionNode {
     operands: Vec<Expression>,
 }
 pub struct Context {
-    variables: std::collections::HashMap<String, f64>,
+    variables: HashMap<String, f64>,
 }
 impl Context {
     pub fn new() -> Self {
         Self {
-            variables: std::collections::HashMap::new(),
+            variables: HashMap::new(),
         }
     }
-    pub fn get_variable_name(&self, name: &str) -> f64 {
-        *self.variables.get(name).unwrap_or(&0.0)
+    pub fn with_variables(variables: HashMap<String, f64>) -> Self {
+        Self { variables }
+    }
+    pub fn push_kv(&mut self, name: &str, value: f64) {
+        self.variables.insert(name.to_string(), value);
+    }
+
+    pub fn try_get_variable_value(&self, name: &str) -> Result<f64, EvalError> {
+        self.variables
+            .get(name)
+            .cloned()
+            .ok_or_else(|| EvalError::UndefinedVariable(name.to_string()))
     }
 }
 
@@ -52,84 +62,86 @@ impl Expression {
         match self {
             Expression::Terminal(TerminalData::Constant(value)) => Ok(*value),
             Expression::Terminal(TerminalData::Variable(name)) => {
-                Ok(context.get_variable_name(name))
+                Ok(context.try_get_variable_value(name)?)
             }
-            Expression::Operation(function_node) => {
-                if let [lhs, rhs] = function_node.operands.as_slice() {
-                    match function_node.operation {
-                        FunctionData::Add => {
-                            let operand_result: Result<Vec<f64>, EvalError> = function_node
-                                .operands
-                                .iter()
-                                .map(|op| op.evaluate(context))
-                                .collect();
-                            let result = operand_result?.iter().sum();
+            Expression::Operation(function_node) => match function_node.operation {
+                FunctionData::Add => {
+                    let operand_result: Result<Vec<f64>, EvalError> = function_node
+                        .operands
+                        .iter()
+                        .map(|op| op.evaluate(context))
+                        .collect();
+                    let result = operand_result?.iter().sum();
 
-                            Ok(result)
-                        }
-                        FunctionData::Subtract => {
-                            if function_node.operands.len() != 2 {
-                                return Err(EvalError::IncorrectOperandCount);
-                            }
-                            let op_values: Vec<f64> = function_node
-                                .operands
-                                .iter()
-                                .map(|op| op.evaluate(context))
-                                .collect::<Result<Vec<f64>, EvalError>>()?;
-                            Ok(op_values[0] - op_values[1])
-                        }
-                        FunctionData::Multiply => {
-                            let product: f64 = function_node
-                                .operands
-                                .iter()
-                                .map(|op| op.evaluate(context))
-                                .collect::<Result<Vec<f64>, EvalError>>()?
-                                .iter()
-                                .product();
-                            Ok(product)
-                        }
-
-                        FunctionData::Divide => {
-                            if function_node.operands.len() != 2 {
-                                return Err(EvalError::IncorrectOperandCount);
-                            }
-                            let op_values: Vec<f64> = function_node
-                                .operands
-                                .iter()
-                                .map(|op| op.evaluate(context))
-                                .collect::<Result<Vec<f64>, EvalError>>()?;
-
-                            Ok(op_values[0] / op_values[1])
-                        }
-                        FunctionData::Exponent => {
-                            if function_node.operands.len() != 2 {
-                                return Err(EvalError::IncorrectOperandCount);
-                            }
-                            let op_values: Vec<f64> = function_node
-                                .operands
-                                .iter()
-                                .map(|op| op.evaluate(context))
-                                .collect::<Result<Vec<f64>, EvalError>>()?;
-
-                            Ok(op_values[0].powf(op_values[1]))
-                        }
-
-                        FunctionData::Sqrt => {
-                            if let [operand] = function_node.operands.as_slice() {
-                                Ok(operand.evaluate(context)?.sqrt())
-                            } else {
-                                Err(EvalError::IncorrectOperandCount)
-                            }
-                        }
-                        FunctionData::Root { degree } => {
-                            let value = function_node.operands[0].evaluate(context);
-                            Ok(Self::custom_root(value?, degree))
-                        }
-                    }
-                } else {
-                    todo!();
+                    Ok(result)
                 }
-            }
+                FunctionData::Subtract => {
+                    if function_node.operands.len() != 2 {
+                        return Err(EvalError::IncorrectOperandCount);
+                    }
+                    let op_values: Vec<f64> = function_node
+                        .operands
+                        .iter()
+                        .map(|op| op.evaluate(context))
+                        .collect::<Result<Vec<f64>, EvalError>>()?;
+                    Ok(op_values[0] - op_values[1])
+                }
+                FunctionData::Multiply => {
+                    let product: f64 = function_node
+                        .operands
+                        .iter()
+                        .map(|op| op.evaluate(context))
+                        .collect::<Result<Vec<f64>, EvalError>>()?
+                        .iter()
+                        .product();
+                    Ok(product)
+                }
+
+                FunctionData::Divide => {
+                    if function_node.operands.len() != 2 {
+                        return Err(EvalError::IncorrectOperandCount);
+                    }
+                    let op_values: Vec<f64> = function_node
+                        .operands
+                        .iter()
+                        .map(|op| op.evaluate(context))
+                        .collect::<Result<Vec<f64>, EvalError>>()?;
+
+                    Ok(op_values[0] / op_values[1])
+                }
+                FunctionData::Exponent => {
+                    if function_node.operands.len() != 2 {
+                        return Err(EvalError::IncorrectOperandCount);
+                    }
+                    let op_values: Vec<f64> = function_node
+                        .operands
+                        .iter()
+                        .map(|op| op.evaluate(context))
+                        .collect::<Result<Vec<f64>, EvalError>>()?;
+
+                    Ok(op_values[0].powf(op_values[1]))
+                }
+
+                FunctionData::Sqrt => {
+                    if let [operand] = function_node.operands.as_slice() {
+                        Ok(operand.evaluate(context)?.sqrt())
+                    } else {
+                        Err(EvalError::IncorrectOperandCount)
+                    }
+                }
+                FunctionData::Root { degree } => {
+                    if degree <= 0.0 {
+                        return Err(EvalError::InvalidInput);
+                    }
+
+                    if function_node.operands.len() != 1 {
+                        return Err(EvalError::IncorrectOperandCount);
+                    }
+
+                    let value = function_node.operands[0].evaluate(context);
+                    Ok(Expression::custom_root(value?, degree))
+                }
+            },
         }
     }
 
@@ -173,4 +185,7 @@ impl Gene {
 enum EvalError {
     UnsupportedOperation,
     IncorrectOperandCount,
+    InvalidInput,
+    UndefinedVariable(String),
+    UninitializedContext,
 }
