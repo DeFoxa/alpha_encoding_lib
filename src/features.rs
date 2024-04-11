@@ -2,6 +2,7 @@ pub trait Executable {
     fn execute(&self, context: &ExecutionContext) -> f64;
 }
 //TODO: specify context types
+#[derive(Debug)]
 pub struct ExecutionContext {
     data: DataContext,
     parameters: ExecutionParameters,
@@ -9,9 +10,13 @@ pub struct ExecutionContext {
     estimated_slippage: Option<f64>,
 }
 
+#[derive(Debug)]
 pub struct DataContext;
+
+#[derive(Debug)]
 pub struct ExecutionParameters;
 
+#[derive(Debug, Clone)]
 pub enum Operation {
     MovingAverage { period: usize },
     CrossOver,
@@ -21,11 +26,13 @@ pub enum Operation {
     Custom,
 }
 
+#[derive(Debug, Clone)]
 pub enum MomentumTypes {
     TimeSeries,
     CrossSectional,
 }
 
+#[derive(Debug, Clone)]
 pub enum ArbTypes {
     Basis,
     CrossExchange,
