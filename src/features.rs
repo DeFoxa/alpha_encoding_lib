@@ -7,6 +7,10 @@ pub trait Executable {
     fn execute(&self, context: &ExecutionContext) -> f64;
 }
 
+pub trait DataMethods {
+    fn get_by_window(&self, n: &str, granularity: Granularity) -> NormalizedTypes;
+}
+
 #[derive(Debug)]
 pub struct ExecutionContext {
     data: DataContext,
@@ -15,61 +19,69 @@ pub struct ExecutionContext {
     estimated_slippage: Option<f64>,
 }
 
+impl ExecutionContext {
+    pub fn new(data_context: DataContext, parameters: ExecutionParameters) -> Self {
+        ExecutionContext {
+            data: data_context,
+            parameters,
+            estimated_fees: None,
+            estimated_slippage: None,
+        }
+    }
+    pub fn update_fees(&mut self, fees: f64) {
+        self.estimated_fees = Some(fees);
+    }
+    pub fn update_slippage(&mut self, slippage: f64) {
+        self.estimated_slippage = Some(slippage);
+    }
+}
+
 #[derive(Debug)]
 pub enum DataSource {
-    RealTime,
-    Historical,
+    RealTime(NormalizedTypes),
+    Historical(NormalizedTypes),
 }
 
 #[derive(Debug)]
 pub struct DataContext {
-    real_time_data: Option<RealTimeDataStructure>,
-    historical_data: Option<HistoricalDataStructure>,
-    active_source: DataSource,
+    pub data: NormalizedTypes,
+    pub active_source: DataSource,
 }
 impl DataContext {
-    pub fn new() -> Self {
-        todo!();
-    }
-    pub fn update_realtime_data(&mut self, data: RealTimeDataStructure) {
-        self.real_time_data = Some(data);
-        self.active_source = DataSource::RealTime;
-    }
-    pub fn update_historical_data(&mut self, data: HistoricalDataStructure) {
-        self.historical_data = Some(data);
-        self.active_source = DataSource::Historical;
-    }
-    pub fn get_data_window(&self, symbol: &str, n: usize, granularity: Option<CandleGranularity>) {
-        match self.active_source {
-            DataSource::RealTime => {
-                todo!();
-            }
-            DataSource::Historical => {
-                todo!();
-            }
+    pub fn new(data: NormalizedTypes, source: DataSource) -> Self {
+        DataContext {
+            data,
+            active_source: source,
         }
     }
+
+    pub fn update_realtime_data(&mut self, data: NormalizedTypes) {
+        todo!();
+    }
+    pub fn update_historical_data(&mut self, data: NormalizedTypes) {
+        todo!();
+    }
 }
 
-#[derive(Debug, Clone)]
-pub struct RealTimeDataStructure;
-
-#[derive(Debug, Clone)]
-pub enum HistoricalDataStructure {
-    Candle(Candle),
-    Tick(NormalizedTrades),
-    OB(NormalizedBook),
+impl DataMethods for DataContext {
+    fn get_by_window(&self, n: &str, window: Granularity) -> NormalizedTypes {
+        todo!();
+    }
 }
 
-pub enum CandleGranularity {
-    OneMinute,
-    FiveMinute,
-    FifteenMinute,
-    ThirtyMinute,
-    OneHour,
-    FourHour,
-    Daily,
-}
+// #[derive(Debug, Clone)]
+// pub struct RealTimeDataStructure;
+//
+// #[derive(Debug, Clone)]
+// pub enum HistoricalDataStructure {
+//     Candles(Candle),
+//     Ticks(NormalizedTrades),
+//     OB(NormalizedBook),
+// }
+
+// impl HistoricalDataStructure {
+//     fn
+// }
 
 #[derive(Debug)]
 pub struct ExecutionParameters;
