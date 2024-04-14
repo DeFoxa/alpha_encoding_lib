@@ -3,7 +3,7 @@ name = "alpha_encoding_ast"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1.0.82"
+diesel = {version = "2.1.5", features = ["postgres", "serde_json", "r2d2"]}

@@ -1,12 +1,27 @@
-use crate::features::DataMethods;
+use crate::traits::{IODataMethods, LocalDataMethods};
+use std::error::Error;
 //TODO: port logic/types for Normalized Types, and based on todo's in features, write logic for
 //candle creation and usage API
 
 #[derive(Debug, Clone)]
 pub struct Candle;
 
-impl DataMethods for Candle {
-    fn get_by_window(&self, n: &str, granularity: Granularity) -> NormalizedTypes {
+impl LocalDataMethods for Candle {
+    fn get_by_lookback_window(
+        &self,
+        n: &str,
+        window: Granularity,
+    ) -> Result<NormalizedTypes, Box<dyn Error>> {
+        todo!();
+    }
+    fn get_timestamp_lookback(&self, first_ts: i64) -> Result<NormalizedTypes, Box<dyn Error>> {
+        todo!();
+    }
+    fn get_timestamp_window(
+        &self,
+        first_ts: i64,
+        last_ts: i64,
+    ) -> Result<NormalizedTypes, Box<dyn Error>> {
         todo!();
     }
 }
@@ -14,16 +29,45 @@ impl DataMethods for Candle {
 #[derive(Debug, Clone)]
 pub struct NormalizedBook;
 
-impl DataMethods for NormalizedBook {
-    fn get_by_window(&self, n: &str, granularity: Granularity) -> NormalizedTypes {
+impl LocalDataMethods for NormalizedBook {
+    fn get_by_lookback_window(
+        &self,
+        n: &str,
+        window: Granularity,
+    ) -> Result<NormalizedTypes, Box<dyn Error>> {
+        todo!();
+    }
+    fn get_timestamp_lookback(&self, first_ts: i64) -> Result<NormalizedTypes, Box<dyn Error>> {
+        todo!();
+    }
+    fn get_timestamp_window(
+        &self,
+        first_ts: i64,
+        last_ts: i64,
+    ) -> Result<NormalizedTypes, Box<dyn Error>> {
         todo!();
     }
 }
+
 #[derive(Debug, Clone)]
 pub struct NormalizedTrades;
 
-impl DataMethods for NormalizedTrades {
-    fn get_by_window(&self, n: &str, granularity: Granularity) -> NormalizedTypes {
+impl LocalDataMethods for NormalizedTrades {
+    fn get_by_lookback_window(
+        &self,
+        n: &str,
+        window: Granularity,
+    ) -> Result<NormalizedTypes, Box<dyn Error>> {
+        todo!();
+    }
+    fn get_timestamp_lookback(&self, first_ts: i64) -> Result<NormalizedTypes, Box<dyn Error>> {
+        todo!();
+    }
+    fn get_timestamp_window(
+        &self,
+        first_ts: i64,
+        last_ts: i64,
+    ) -> Result<NormalizedTypes, Box<dyn Error>> {
         todo!();
     }
 }

@@ -1,15 +1,10 @@
-use crate::data::types::*;
+use crate::{data::types::*, traits::*};
+use diesel::prelude::*;
+use diesel::PgConnection;
+use std::error;
 
 //TODO: determine if we are going to locally build candles, if so write logic. or only work with
 //normalized data types. Could also write logic to handle both cases, make decision.
-
-pub trait Executable {
-    fn execute(&self, context: &ExecutionContext) -> f64;
-}
-
-pub trait DataMethods {
-    fn get_by_window(&self, n: &str, granularity: Granularity) -> NormalizedTypes;
-}
 
 #[derive(Debug)]
 pub struct ExecutionContext {
@@ -63,8 +58,25 @@ impl DataContext {
     }
 }
 
-impl DataMethods for DataContext {
-    fn get_by_window(&self, n: &str, window: Granularity) -> NormalizedTypes {
+impl LocalDataMethods for DataContext {
+    fn get_by_lookback_window(
+        &self,
+        n: &str,
+        window: Granularity,
+    ) -> Result<NormalizedTypes, Box<dyn error::Error>> {
+        todo!();
+    }
+    fn get_timestamp_lookback(
+        &self,
+        first_ts: i64,
+    ) -> Result<NormalizedTypes, Box<dyn error::Error>> {
+        todo!();
+    }
+    fn get_timestamp_window(
+        &self,
+        first_ts: i64,
+        last_ts: i64,
+    ) -> Result<NormalizedTypes, Box<dyn error::Error>> {
         todo!();
     }
 }
