@@ -58,29 +58,69 @@ impl DataContext {
     }
 }
 
-impl LocalDataMethods for DataContext {
-    fn get_by_lookback_window(
-        &self,
-        n: &str,
-        window: Granularity,
-    ) -> Result<NormalizedTypes, Box<dyn error::Error>> {
-        todo!();
-    }
-    fn get_timestamp_lookback(
-        &self,
-        first_ts: i64,
-    ) -> Result<NormalizedTypes, Box<dyn error::Error>> {
-        todo!();
-    }
-    fn get_timestamp_window(
-        &self,
-        first_ts: i64,
-        last_ts: i64,
-    ) -> Result<NormalizedTypes, Box<dyn error::Error>> {
-        todo!();
-    }
-}
+//NOTE: Don't think this will be necessary after data method rewrite, keeping for now
+// impl LocalDataMethods for DataContext {
+//     type Output =
+//     fn get_by_lookback_window(
+//         &self,
+//         n: &str,
+//         window: Granularity,
+//     ) -> Result<NormalizedTypes, Box<dyn error::Error>> {
+//         todo!();
+//     }
+//     fn get_timestamp_lookback(
+//         &self,
+//         first_ts: i64,
+//     ) -> Result<NormalizedTypes, Box<dyn error::Error>> {
+//         todo!();
+//     }
+//     fn get_timestamp_window(
+//         &self,
+//         first_ts: i64,
+//         last_ts: i64,
+//     ) -> Result<NormalizedTypes, Box<dyn error::Error>> {
+//         todo!();
+//     }
+// }
+//
+// pub struct PlaceHolder;
 
+// impl IODataMethods for DataContext {
+//     type Item = PlaceHolder;
+//
+//     fn from_file_full_dataset(&self, path: &str) -> Result<NormalizedTypes, std::io::Error> {
+//         todo!();
+//     }
+//     fn from_file_by_ts_lookback(
+//         &self,
+//         path: &str,
+//         last_ts: i64,
+//     ) -> Result<NormalizedTypes, std::io::Error> {
+//         todo!();
+//     }
+//     fn from_file_by_ts_window(
+//         &self,
+//         path: &str,
+//         first_ts: i64,
+//         last_ts: i64,
+//     ) -> Result<NormalizedTypes, std::io::Error> {
+//         todo!();
+//     }
+//     fn from_db_all_entries(
+//         &self,
+//         conn: &PgConnection,
+//     ) -> Result<Vec<Self::Item>, diesel::result::Error> {
+//         todo!();
+//     }
+//     fn db_ts_window(
+//         &self,
+//         conn: &PgConnection,
+//         first_ts: i64,
+//         last_entry: i64,
+//     ) -> Result<Vec<Self::Item>, diesel::result::Error> {
+//         todo!();
+//     }
+// }
 // #[derive(Debug, Clone)]
 // pub struct RealTimeDataStructure;
 //
@@ -131,4 +171,47 @@ pub enum ArbTypes {
     Triangle,
     Funding,
     Statistical,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data::types::{Candle, NormalizedTypes};
+    use std::path::PathBuf;
+
+    fn setup_test_env() -> (DataContext, PathBuf) {
+        let data = NormalizedTypes::Candles(vec![]);
+        let source = DataSource::Historical(data.clone());
+        let ctx = DataContext::new(data, source);
+        let path = PathBuf::from("test_data.csv");
+
+        (ctx, path)
+    }
+
+    #[test]
+    fn test_from_file_full_dataset() {
+        let (context, path) = setup_test_env();
+        assert!(context
+            .from_file_full_dataset(path.to_str().unwrap())
+            .is_ok());
+    }
+    #[test]
+    fn test_timestamp_lookback() {
+        let (ctx, _) = setup_test_env();
+        let result = ctx.get_timestamp_lookback(1622548800 /*place holder*/);
+        assert!(result.is_ok());
+
+        //TODO: Fix testing to match new DataSet types, replace old version implemented for
+        // Vec<Type>
+        // match result {
+        //     Ok(NormalizedTypes::Candles(candles)) if !candles.is_empty() => {
+        //         assert!(true, "candles data retrieved successfully")
+        //     }
+        //     Ok(_) => assert!(
+        //         false,
+        //         "data retrieved, but it was not candle data or was empty"
+        //     ),
+        //     Err(e) => assert!(false, "Error: {:?}", e),
+        // }
+    }
 }
