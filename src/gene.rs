@@ -60,6 +60,7 @@ pub enum Expression {
     Terminal(TerminalData),
     Operation(FunctionNode),
 }
+
 impl Expression {
     pub fn evaluate(&self, context: &Context) -> Result<f64, EvalError> {
         match self {
@@ -132,6 +133,7 @@ impl Expression {
                         Err(EvalError::IncorrectOperandCount)
                     }
                 }
+
                 FunctionData::Root { degree } => {
                     if degree <= 0.0 {
                         return Err(EvalError::InvalidInput);

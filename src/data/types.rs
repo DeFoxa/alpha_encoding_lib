@@ -243,6 +243,61 @@ impl IODataMethods for BookDataSet {
 pub struct TradesDataSet {
     data: VecDeque<NormalizedTrades>,
 }
+impl TradesDataSet {
+    fn new() -> Self {
+        TradesDataSet {
+            data: VecDeque::new(),
+        }
+    }
+    fn new_with_capacity(capacity: usize) -> Self {
+        TradesDataSet {
+            data: VecDeque::with_capacity(capacity),
+        }
+    }
+    fn get(&self, index: usize) -> Option<NormalizedTrades> {
+        self.data.get(index).cloned()
+    }
+
+    fn shrink_to_fit(&mut self) {
+        self.data.shrink_to_fit();
+    }
+
+    // fn as_slices(&self) -
+    fn len(&self) -> usize {
+        self.data.len()
+    }
+    fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+    fn truncate(&mut self, len: usize) {
+        //NOTE: shortens keeping first len elements
+        self.data.truncate(len);
+    }
+    fn sort_by_timestamp(&mut self) {
+        self.data
+            .make_contiguous()
+            .sort_by(|a, b| a.transaction_timestamp.cmp(&b.transaction_timestamp));
+    }
+
+    fn back_timestamp(&self) -> Option<i64> {
+        let back = self.data.back().and_then(|x| Some(x.transaction_timestamp));
+        Some(back?)
+    }
+    fn binary_timestamp_search_return_range(
+        &mut self,
+        target_timestamp: i64,
+    ) -> Result<Vec<&NormalizedTrades>, Box<dyn Error>> {
+        self.sort_by_timestamp();
+
+        match self
+            .data
+            .binary_search_by_key(&target_timestamp, |entry| entry.transaction_timestamp)
+        {
+            Ok(first) => Ok(self.data.range(0..first).collect::<Vec<_>>()),
+            Err(_) => Err("Timestamp not found".into()),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct NormalizedTrades {
