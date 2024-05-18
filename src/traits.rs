@@ -13,11 +13,6 @@ pub trait Executable {
 pub trait LocalDataMethods {
     type Output;
 
-    // fn get_by_lookback_window(
-    //     &self,
-    //     n: &str,
-    //     granularity: Granularity,
-    // ) -> Result<Self::Output, Box<dyn Error>>;
     fn get_timestamp_lookback(&self, first_ts: i64) -> Result<Self::Output, Box<dyn Error>>;
     fn get_timestamp_window(
         &self,
@@ -28,7 +23,7 @@ pub trait LocalDataMethods {
 
 #[async_trait]
 pub trait IODataMethods {
-    type Item; // Target queryable type for DB reads/writes
+    type Item;
 
     async fn from_file_full_dataset(&self, path: &str) -> Result<Vec<Self::Item>, std::io::Error>;
     async fn from_file_by_ts_lookback(
