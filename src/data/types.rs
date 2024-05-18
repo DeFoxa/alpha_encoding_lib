@@ -262,7 +262,6 @@ impl TradesDataSet {
         self.data.shrink_to_fit();
     }
 
-    // fn as_slices(&self) -
     fn len(&self) -> usize {
         self.data.len()
     }
@@ -283,7 +282,7 @@ impl TradesDataSet {
         let back = self.data.back().and_then(|x| Some(x.transaction_timestamp));
         Some(back?)
     }
-    fn binary_timestamp_search_return_range(
+    fn binary_search_timestamp_by_return_range(
         &mut self,
         target_timestamp: i64,
     ) -> Result<Vec<&NormalizedTrades>, Box<dyn Error>> {
@@ -294,7 +293,7 @@ impl TradesDataSet {
             .binary_search_by_key(&target_timestamp, |entry| entry.transaction_timestamp)
         {
             Ok(first) => Ok(self.data.range(0..first).collect::<Vec<_>>()),
-            Err(_) => Err("Timestamp not found".into()),
+            Err(_) => Err("Binary search TradesDataSet Error: Timestamp not found".into()),
         }
     }
 }
