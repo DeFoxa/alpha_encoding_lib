@@ -2,9 +2,9 @@ use crate::{
     data::types::{Granularity, NormalizedTypes},
     features::ExecutionContext,
 };
-use anyhow::Result;
 use async_trait::async_trait;
 use diesel::PgConnection;
+use eyre::Result;
 use std::{error::Error, fs};
 
 pub trait Executable {
