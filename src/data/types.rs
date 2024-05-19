@@ -2,6 +2,7 @@ use crate::traits::{DataUpdate, IODataMethods, LocalDataMethods};
 use anyhow::Result;
 use async_trait::async_trait;
 use csv::ReaderBuilder;
+use diesel::sql_types::Timestamp;
 use diesel::PgConnection;
 use serde::{Deserialize, Serialize};
 use serde_json::de::from_reader;
@@ -15,6 +16,8 @@ use tokio::{fs::File, io::AsyncReadExt};
 
 pub struct PlaceHolder;
 
+// TS
+type TS = i64;
 //NOTE: Intial iteration, may rewrite for real-time bar builder
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Candle {
@@ -23,13 +26,13 @@ pub struct Candle {
     low: f64,
     close: f64,
     volume: f64,
-    close_timestamp: i64,
+    close_timestamp: TS,
 }
 
 #[derive(Debug, Clone)]
 pub struct CandleDataSet {
     granularity: CandleGranularity,
-    data: BTreeMap<i64, Candle>,
+    data: BTreeMap<TS, Candle>,
 }
 
 impl CandleDataSet {
@@ -42,7 +45,7 @@ impl CandleDataSet {
     fn single_insert(&mut self, timestamp: i64, candle: Candle) {
         self.data.insert(timestamp, candle);
     }
-    fn get_range(&self, first_ts: i64, last_ts: i64) -> Result<Vec<&Candle>, Box<dyn Error>> {
+    fn get_range(&self, first_ts: TS, last_ts: TS) -> Result<Vec<&Candle>, Box<dyn Error>> {
         Ok(self
             .data
             .range(first_ts..=last_ts)
@@ -62,7 +65,7 @@ impl DataUpdate for CandleDataSet {
 impl LocalDataMethods for CandleDataSet {
     type Output = Vec<Candle>;
 
-    fn get_timestamp_lookback(&self, lookback_ts: i64) -> Result<Self::Output, Box<dyn Error>> {
+    fn get_timestamp_lookback(&self, lookback_ts: TS) -> Result<Self::Output, Box<dyn Error>> {
         Ok(self
             .data
             .range((Included(lookback_ts), Unbounded))
@@ -72,8 +75,8 @@ impl LocalDataMethods for CandleDataSet {
 
     fn get_timestamp_window(
         &self,
-        first_ts: i64,
-        last_ts: i64,
+        first_ts: TS,
+        last_ts: TS,
     ) -> Result<Self::Output, Box<dyn Error>> {
         Ok(self
             .data
@@ -92,15 +95,15 @@ impl IODataMethods for CandleDataSet {
     async fn from_file_by_ts_lookback(
         &self,
         path: &str,
-        last_ts: i64,
+        last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
         todo!();
     }
     async fn from_file_by_ts_window(
         &self,
         path: &str,
-        first_ts: i64,
-        last_ts: i64,
+        first_ts: TS,
+        last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
         todo!();
     }
@@ -113,8 +116,8 @@ impl IODataMethods for CandleDataSet {
     async fn db_ts_window(
         &self,
         conn: &PgConnection,
-        first_ts: i64,
-        last_entry: i64,
+        first_ts: TS,
+        last_entry: TS,
     ) -> Result<Vec<Self::Item>, diesel::result::Error> {
         todo!();
     }
@@ -136,12 +139,12 @@ pub struct NormalizedBook {
     pub depth: u16,
     pub bids: Vec<Quotes>,
     pub asks: Vec<Quotes>,
-    pub timestamp: i64,
+    pub timestamp: TS,
 }
 
 #[derive(Debug, Clone)]
 pub struct BookDataSet {
-    data: BTreeMap<i64, NormalizedBook>,
+    data: BTreeMap<TS, NormalizedBook>,
 }
 impl BookDataSet {
     fn new(granularity: CandleGranularity) -> Self {
@@ -149,7 +152,7 @@ impl BookDataSet {
             data: BTreeMap::new(),
         }
     }
-    fn single_insert(&mut self, timestamp: i64, book: NormalizedBook) {
+    fn single_insert(&mut self, timestamp: TS, book: NormalizedBook) {
         self.data.insert(timestamp, book);
     }
 }
@@ -166,7 +169,7 @@ impl DataUpdate for BookDataSet {
 impl LocalDataMethods for BookDataSet {
     type Output = Vec<NormalizedBook>;
 
-    fn get_timestamp_lookback(&self, lookback_ts: i64) -> Result<Self::Output, Box<dyn Error>> {
+    fn get_timestamp_lookback(&self, lookback_ts: TS) -> Result<Self::Output, Box<dyn Error>> {
         Ok(self
             .data
             .range((Included(lookback_ts), Unbounded))
@@ -175,8 +178,8 @@ impl LocalDataMethods for BookDataSet {
     }
     fn get_timestamp_window(
         &self,
-        first_ts: i64,
-        last_ts: i64,
+        first_ts: TS,
+        last_ts: TS,
     ) -> Result<Self::Output, Box<dyn Error>> {
         Ok(self
             .data
@@ -196,7 +199,7 @@ impl IODataMethods for BookDataSet {
     async fn from_file_by_ts_lookback(
         &self,
         path: &str,
-        last_ts: i64,
+        last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
         // NOTE: Tmp implementation
         // TODO: Optimize
@@ -218,8 +221,8 @@ impl IODataMethods for BookDataSet {
     async fn from_file_by_ts_window(
         &self,
         path: &str,
-        first_ts: i64,
-        last_ts: i64,
+        first_ts: TS,
+        last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
         todo!();
     }
@@ -232,8 +235,8 @@ impl IODataMethods for BookDataSet {
     async fn db_ts_window(
         &self,
         conn: &PgConnection,
-        first_ts: i64,
-        last_entry: i64,
+        first_ts: TS,
+        last_entry: TS,
     ) -> Result<Vec<Self::Item>, diesel::result::Error> {
         todo!();
     }
@@ -278,13 +281,13 @@ impl TradesDataSet {
             .sort_by(|a, b| a.transaction_timestamp.cmp(&b.transaction_timestamp));
     }
 
-    fn back_timestamp(&self) -> Option<i64> {
+    fn back_timestamp(&self) -> Option<TS> {
         let back = self.data.back().and_then(|x| Some(x.transaction_timestamp));
         Some(back?)
     }
     fn binary_search_timestamp_by_return_range(
         &mut self,
-        target_timestamp: i64,
+        target_timestamp: TS,
     ) -> Result<Vec<&NormalizedTrades>, Box<dyn Error>> {
         self.sort_by_timestamp();
 
@@ -293,7 +296,7 @@ impl TradesDataSet {
             .binary_search_by_key(&target_timestamp, |entry| entry.transaction_timestamp)
         {
             Ok(first) => Ok(self.data.range(0..first).collect::<Vec<_>>()),
-            Err(_) => Err("Binary search TradesDataSet Error: Timestamp not found".into()),
+            Err(_) => Err("Binary search TradesDataSet Error: TS not found".into()),
         }
     }
 }
@@ -306,19 +309,19 @@ pub struct NormalizedTrades {
     pub qty: f64,
     pub local_ids: u32,
     pub exch_id: i64,
-    pub transaction_timestamp: i64,
+    pub transaction_timestamp: TS,
 }
 
 impl LocalDataMethods for TradesDataSet {
     type Output = Vec<NormalizedTrades>;
 
-    fn get_timestamp_lookback(&self, first_ts: i64) -> Result<Self::Output, Box<dyn Error>> {
+    fn get_timestamp_lookback(&self, first_ts: TS) -> Result<Self::Output, Box<dyn Error>> {
         todo!();
     }
     fn get_timestamp_window(
         &self,
-        first_ts: i64,
-        last_ts: i64,
+        first_ts: TS,
+        last_ts: TS,
     ) -> Result<Self::Output, Box<dyn Error>> {
         todo!();
     }
@@ -334,15 +337,15 @@ impl IODataMethods for TradesDataSet {
     async fn from_file_by_ts_lookback(
         &self,
         path: &str,
-        last_ts: i64,
+        last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
         todo!();
     }
     async fn from_file_by_ts_window(
         &self,
         path: &str,
-        first_ts: i64,
-        last_ts: i64,
+        first_ts: TS,
+        last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
         todo!();
     }
@@ -355,8 +358,8 @@ impl IODataMethods for TradesDataSet {
     async fn db_ts_window(
         &self,
         conn: &PgConnection,
-        first_ts: i64,
-        last_entry: i64,
+        first_ts: TS,
+        last_entry: TS,
     ) -> Result<Vec<Self::Item>, diesel::result::Error> {
         todo!();
     }
