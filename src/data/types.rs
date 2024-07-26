@@ -11,41 +11,38 @@ use std::error::Error;
 use std::ops::Bound::{Included, Unbounded};
 use tokio::{fs::File, io::AsyncReadExt};
 
-//TODO: port logic/types for Normalized Types, and based on todo's in features, write logic for
-//candle creation and usage API
-
 pub struct PlaceHolder;
 
 // TS
 type TS = i64;
 //NOTE: Intial iteration, may rewrite for real-time bar builder
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Candle {
-    open: f64,
-    high: f64,
-    low: f64,
-    close: f64,
-    volume: f64,
-    close_timestamp: TS,
+pub struct Bar {
+    o: f64,
+    h: f64,
+    l: f64,
+    c: f64,
+    v: f64,
+    ts: TS,
 }
 
 #[derive(Debug, Clone)]
-pub struct CandleDataSet {
-    granularity: CandleGranularity,
-    data: BTreeMap<TS, Candle>,
+pub struct BarDataSet {
+    pub granularity: BarGranularity,
+    pub data: BTreeMap<TS, Bar>,
 }
 
-impl CandleDataSet {
-    fn new(granularity: CandleGranularity) -> Self {
-        CandleDataSet {
+impl BarDataSet {
+    fn new(granularity: BarGranularity) -> Self {
+        BarDataSet {
             granularity,
             data: BTreeMap::new(),
         }
     }
-    fn single_insert(&mut self, timestamp: i64, candle: Candle) {
+    fn single_insert(&mut self, timestamp: i64, candle: Bar) {
         self.data.insert(timestamp, candle);
     }
-    fn get_range(&self, first_ts: TS, last_ts: TS) -> Result<Vec<&Candle>, Box<dyn Error>> {
+    fn get_range(&self, first_ts: TS, last_ts: TS) -> Result<Vec<&Bar>, Box<dyn Error>> {
         Ok(self
             .data
             .range(first_ts..=last_ts)
@@ -53,17 +50,17 @@ impl CandleDataSet {
             .collect())
     }
 }
-impl DataUpdate for CandleDataSet {
-    type NewData = Vec<Candle>;
+impl DataUpdate for BarDataSet {
+    type NewData = Vec<Bar>;
 
     fn update(&mut self, data: Self::NewData) {
         data.iter()
-            .map(|entry| self.data.insert(entry.close_timestamp, entry.clone()));
+            .map(|entry| self.data.insert(entry.ts, entry.clone()));
     }
 }
 
-impl LocalDataMethods for CandleDataSet {
-    type Output = Vec<Candle>;
+impl LocalDataMethods for BarDataSet {
+    type Output = Vec<Bar>;
 
     fn get_timestamp_lookback(&self, lookback_ts: TS) -> Result<Self::Output, Box<dyn Error>> {
         Ok(self
@@ -86,8 +83,8 @@ impl LocalDataMethods for CandleDataSet {
     }
 }
 #[async_trait]
-impl IODataMethods for CandleDataSet {
-    type Item = Candle;
+impl IODataMethods for BarDataSet {
+    type Item = Bar;
 
     async fn from_file_full_dataset(&self, path: &str) -> Result<Vec<Self::Item>, std::io::Error> {
         todo!();
@@ -147,7 +144,7 @@ pub struct BookDataSet {
     data: BTreeMap<TS, NormalizedBook>,
 }
 impl BookDataSet {
-    fn new(granularity: CandleGranularity) -> Self {
+    fn new(granularity: BarGranularity) -> Self {
         BookDataSet {
             data: BTreeMap::new(),
         }
@@ -243,21 +240,21 @@ impl IODataMethods for BookDataSet {
 }
 
 #[derive(Debug, Clone)]
-pub struct TradesDataSet {
-    data: VecDeque<NormalizedTrades>,
+pub struct TickDataSet {
+    data: VecDeque<NormalizedTicks>,
 }
-impl TradesDataSet {
+impl TickDataSet {
     fn new() -> Self {
-        TradesDataSet {
+        TickDataSet {
             data: VecDeque::new(),
         }
     }
     fn new_with_capacity(capacity: usize) -> Self {
-        TradesDataSet {
+        TickDataSet {
             data: VecDeque::with_capacity(capacity),
         }
     }
-    fn get(&self, index: usize) -> Option<NormalizedTrades> {
+    fn get(&self, index: usize) -> Option<NormalizedTicks> {
         self.data.get(index).cloned()
     }
 
@@ -278,68 +275,68 @@ impl TradesDataSet {
     fn sort_by_timestamp(&mut self) {
         self.data
             .make_contiguous()
-            .sort_by(|a, b| a.transaction_timestamp.cmp(&b.transaction_timestamp));
+            .sort_by(|a, b| a.tx_ts.cmp(&b.tx_ts));
     }
 
     fn back_timestamp(&self) -> Option<TS> {
-        let back = self.data.back().and_then(|x| Some(x.transaction_timestamp));
+        let back = self.data.back().and_then(|x| Some(x.tx_ts));
         Some(back?)
     }
     fn binary_search_timestamp_by_return_range(
         &mut self,
         target_timestamp: TS,
-    ) -> Result<Vec<&NormalizedTrades>, Box<dyn Error>> {
+    ) -> Result<Vec<&NormalizedTicks>, Box<dyn Error>> {
         self.sort_by_timestamp();
 
         match self
             .data
-            .binary_search_by_key(&target_timestamp, |entry| entry.transaction_timestamp)
+            .binary_search_by_key(&target_timestamp, |entry| entry.tx_ts)
         {
             Ok(first) => Ok(self.data.range(0..first).collect::<Vec<_>>()),
-            Err(_) => Err("Binary search TradesDataSet Error: TS not found".into()),
+            Err(_) => Err("Binary search TickDataSet Error: TS not found".into()),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct NormalizedTrades {
+pub struct NormalizedTicks {
     pub symbol: String,
     pub side: Side,
-    pub price: f64,
+    pub px: f64,
     pub qty: f64,
     pub local_ids: u32,
-    pub exch_id: i64,
-    pub transaction_timestamp: TS,
+    pub server_id: i64,
+    pub tx_ts: TS,
 }
 
-impl LocalDataMethods for TradesDataSet {
-    type Output = Vec<NormalizedTrades>;
+impl LocalDataMethods for TickDataSet {
+    type Output = Vec<NormalizedTicks>;
 
     fn get_timestamp_lookback(&self, first_ts: TS) -> Result<Self::Output, Box<dyn Error>> {
-        todo!();
+        unimplemented!();
     }
     fn get_timestamp_window(
         &self,
         first_ts: TS,
         last_ts: TS,
     ) -> Result<Self::Output, Box<dyn Error>> {
-        todo!();
+        unimplemented!();
     }
 }
 
 #[async_trait]
-impl IODataMethods for TradesDataSet {
-    type Item = NormalizedTrades;
+impl IODataMethods for TickDataSet {
+    type Item = NormalizedTicks;
 
     async fn from_file_full_dataset(&self, path: &str) -> Result<Vec<Self::Item>, std::io::Error> {
-        todo!();
+        unimplemented!();
     }
     async fn from_file_by_ts_lookback(
         &self,
         path: &str,
         last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
-        todo!();
+        unimplemented!();
     }
     async fn from_file_by_ts_window(
         &self,
@@ -347,13 +344,13 @@ impl IODataMethods for TradesDataSet {
         first_ts: TS,
         last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
-        todo!();
+        unimplemented!();
     }
     async fn from_db_all_entries(
         &self,
         conn: &PgConnection,
     ) -> Result<Vec<Self::Item>, diesel::result::Error> {
-        todo!();
+        unimplemented!();
     }
     async fn db_ts_window(
         &self,
@@ -361,26 +358,26 @@ impl IODataMethods for TradesDataSet {
         first_ts: TS,
         last_entry: TS,
     ) -> Result<Vec<Self::Item>, diesel::result::Error> {
-        todo!();
+        unimplemented!();
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum NormalizedTypes {
-    Candles(CandleDataSet),
+    Bar(BarDataSet),
     Orderbook(BookDataSet),
-    Trades(TradesDataSet),
+    Ticks(TickDataSet),
 }
 
 #[derive(Debug, Clone)]
 pub enum Granularity {
-    Candle(CandleGranularity),
-    Trades(TradesGranularity),
-    OB(OrderBookGranularity),
+    Bar(BarGranularity),
+    Ticks(TickGranularity),
+    OB(OBGranularity),
 }
 
 #[derive(Debug, Clone)]
-pub enum CandleGranularity {
+pub enum BarGranularity {
     OneMinute,
     FiveMinute,
     FifteenMinute,
@@ -391,12 +388,12 @@ pub enum CandleGranularity {
 }
 
 #[derive(Debug, Clone)]
-pub struct TradesGranularity {
+pub struct TickGranularity {
     data_length: u64,
 }
 
 #[derive(Debug, Clone)]
-pub struct OrderBookGranularity {
+pub struct OBGranularity {
     data_snapshot_length: u64,
 }
 

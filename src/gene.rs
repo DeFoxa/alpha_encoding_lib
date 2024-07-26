@@ -1,6 +1,10 @@
 use crate::features::{ExecutionContext, Operation};
 use std::collections::HashMap;
 
+// TODO: For Tree structure mem management look into generational-arena usage
+// see: https://crates.io/crates/generational-arena
+// gh: https://github.com/fitzgen/generational-arenajkj
+
 //TODO: Consider all variations and then write logic for Gene methods.
 //TODO: Test Expression logic for both functionality and recursive use cases.
 
