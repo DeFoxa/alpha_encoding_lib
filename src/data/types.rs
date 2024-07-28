@@ -11,10 +11,9 @@ use std::error::Error;
 use std::ops::Bound::{Included, Unbounded};
 use tokio::{fs::File, io::AsyncReadExt};
 
-pub struct PlaceHolder;
-
-// TS
+// Timestamp
 type TS = i64;
+
 //NOTE: Intial iteration, may rewrite for real-time bar builder
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bar {
@@ -50,6 +49,7 @@ impl BarDataSet {
             .collect())
     }
 }
+
 impl DataUpdate for BarDataSet {
     type NewData = Vec<Bar>;
 
