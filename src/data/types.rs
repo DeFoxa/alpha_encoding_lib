@@ -188,7 +188,7 @@ pub struct NormalizedBook {
     pub depth: u16,
     pub bids: Vec<Quotes>,
     pub asks: Vec<Quotes>,
-    pub timestamp: TS,
+    pub ts: TS,
 }
 
 #[derive(Debug, Clone)]
@@ -211,7 +211,7 @@ impl DataUpdate for BookDataSet {
 
     fn update(&mut self, data: Self::NewData) {
         data.iter()
-            .map(|entry| self.data.insert(entry.timestamp, entry.clone()));
+            .map(|entry| self.data.insert(entry.t, entry.clone()));
     }
 }
 
@@ -243,7 +243,22 @@ impl IODataMethods for BookDataSet {
     type Item = NormalizedBook;
 
     async fn from_file_full_dataset(&self, path: &str) -> Result<Vec<Self::Item>, std::io::Error> {
-        todo!();
+        let mut file = File::open(path).await?;
+        let mut contents = String::new();
+
+        file.read_to_string(&mut contents).await?;
+
+        let mut csv_reader = ReaderBuilder::new()
+            .has_headers(true)
+            .from_reader(contents.as_bytes());
+
+        let mut book = Vec::new();
+        for result in csv_reader.deserialize() {
+            let record: NormalizedBook =
+                result.map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e))?;
+        }
+
+        Ok(book)
     }
     async fn from_file_by_ts_lookback(
         &self,
@@ -253,6 +268,7 @@ impl IODataMethods for BookDataSet {
         let mut file = File::open(path).await?;
         let mut contents = String::new();
         file.read_to_string(&mut contents).await?;
+
         let mut reader = ReaderBuilder::new().from_reader(contents.as_bytes());
 
         let mut book = Vec::new();
@@ -268,7 +284,26 @@ impl IODataMethods for BookDataSet {
         first_ts: TS,
         last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
-        todo!();
+        let mut file = File::open(path).await?;
+        let mut contents = String::new();
+
+        file.read_to_string(&mut contents).await?;
+
+        let mut csv_reader = ReaderBuilder::new()
+            .has_headers(true)
+            .from_reader(contents.as_bytes());
+
+        let mut book = Vec::new();
+
+        for result in csv_reader.deserialize() {
+            let record: NormalizedBook =
+                result.map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e))?;
+            if record.ts >= first_ts && record.ts <= last_ts {
+                book.push(record);
+            }
+        }
+
+        Ok(book)
     }
     async fn from_db_all_entries(
         &self,
