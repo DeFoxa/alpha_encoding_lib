@@ -112,7 +112,23 @@ impl IODataMethods for BarDataSet {
         path: &str,
         last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
-        todo!();
+        let mut file = File::open(path).await?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).await?;
+
+        let mut csv_reader = ReaderBuilder::new()
+            .has_headers(true)
+            .from_reader(contents.as_bytes());
+
+        let mut bars = Vec::new();
+
+        for result in csv_reader.deserialize() {
+            let record: Bar = result.map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e))?;
+            if record.ts >= last_ts {
+                bars.push(record);
+            }
+        }
+        Ok(bars)
     }
     async fn from_file_by_ts_window(
         &self,
