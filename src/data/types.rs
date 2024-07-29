@@ -104,6 +104,7 @@ impl IODataMethods for BarDataSet {
         for result in csv_reader.deserialize() {
             let record: Bar = result.map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e))?;
         }
+
         Ok(bars)
     }
     async fn from_file_by_ts_lookback(
@@ -132,8 +133,11 @@ impl IODataMethods for BarDataSet {
 
         for result in csv_reader.deserialize() {
             let record: Bar = result.map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e))?;
-            bars.push(record);
+            if record.ts >= first_ts && record.ts <= last_ts {
+                bars.push(record);
+            }
         }
+
         Ok(bars)
     }
     async fn from_db_all_entries(
