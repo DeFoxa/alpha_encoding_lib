@@ -272,10 +272,15 @@ impl IODataMethods for BookDataSet {
         let mut reader = ReaderBuilder::new().from_reader(contents.as_bytes());
 
         let mut book = Vec::new();
-        for result in reader.deserialize::<NormalizedBook>() {
-            let record = result.map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e))?;
-            book.push(record);
+        for result in reader.deserialize() {
+            let record: NormalizedBook =
+                result.map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e))?;
+
+            if record.ts >= last_ts {
+                book.push(record);
+            }
         }
+
         Ok(book)
     }
     async fn from_file_by_ts_window(
