@@ -1,14 +1,17 @@
 use crate::traits::{DataUpdate, IODataMethods, LocalDataMethods};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use csv::ReaderBuilder;
 use diesel::sql_types::Timestamp;
 use diesel::PgConnection;
 use serde::{Deserialize, Serialize};
 use serde_json::de::from_reader;
-use std::collections::{BTreeMap, VecDeque};
-use std::error::Error;
-use std::ops::Bound::{Included, Unbounded};
+use std::{
+    collections::{BTreeMap, VecDeque},
+    error::Error,
+    io::{BufReader, ErrorKind},
+    ops::Bound::{Included, Unbounded},
+};
 use tokio::{fs::File, io::AsyncReadExt};
 
 // Timestamp
@@ -82,6 +85,7 @@ impl LocalDataMethods for BarDataSet {
             .collect())
     }
 }
+
 #[async_trait]
 impl IODataMethods for BarDataSet {
     type Item = Bar;
@@ -102,7 +106,22 @@ impl IODataMethods for BarDataSet {
         first_ts: TS,
         last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
-        todo!();
+        let mut file = File::open(path).await?;
+        let mut contents = String::new();
+
+        file.read_to_string(&mut contents).await?;
+
+        let mut csv_reader = ReaderBuilder::new()
+            .has_headers(true)
+            .from_reader(contents.as_bytes());
+
+        let mut bars = Vec::new();
+
+        for result in csv_reader.deserialize() {
+            let record: Bar = result.map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e))?;
+            bars.push(record);
+        }
+        Ok(bars)
     }
     async fn from_db_all_entries(
         &self,
@@ -198,22 +217,17 @@ impl IODataMethods for BookDataSet {
         path: &str,
         last_ts: TS,
     ) -> Result<Vec<Self::Item>, std::io::Error> {
-        // NOTE: Tmp implementation
-        // TODO: Optimize
-        // let file = File::open(path).await?;
-        // let mut contents = String::new();
-        // file.read_to_string(&mut contents).await?;
-        // let reader = ReaderBuilder::new().from_reader(contents.as_bytes());
-        //
-        // let mut book = Vec::new();
-        // for result in reader.deserialize::<NormalizedBook>() {
-        //     let book = result?;
-        //     if result.timestamp >= last_ts {
-        //         book.push(result);
-        //     }
-        // }
-        todo!();
-        // Ok()
+        let mut file = File::open(path).await?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).await?;
+        let mut reader = ReaderBuilder::new().from_reader(contents.as_bytes());
+
+        let mut book = Vec::new();
+        for result in reader.deserialize::<NormalizedBook>() {
+            let record = result.map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e))?;
+            book.push(record);
+        }
+        Ok(book)
     }
     async fn from_file_by_ts_window(
         &self,
