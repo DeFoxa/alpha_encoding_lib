@@ -211,7 +211,7 @@ impl DataUpdate for BookDataSet {
 
     fn update(&mut self, data: Self::NewData) {
         data.iter()
-            .map(|entry| self.data.insert(entry.t, entry.clone()));
+            .map(|entry| self.data.insert(entry.ts, entry.clone()));
     }
 }
 
@@ -326,21 +326,38 @@ impl IODataMethods for BookDataSet {
     }
 }
 
+//NOTE:
+// Tick data is read-in from file into a local VecDeque, each VecDeque of data is stored in a
+// Vec<VecDeque NormalizedTick>
+//
+
 #[derive(Debug, Clone)]
 pub struct TickDataSet {
+    identifier: String,
     data: VecDeque<NormalizedTicks>,
 }
+
 impl TickDataSet {
-    fn new() -> Self {
+    fn new(identifier: String) -> Self {
         TickDataSet {
+            identifier,
             data: VecDeque::new(),
         }
     }
-    fn new_with_capacity(capacity: usize) -> Self {
+    fn new_with_capacity(identifier: String, capacity: usize) -> Self {
         TickDataSet {
+            identifier,
             data: VecDeque::with_capacity(capacity),
         }
     }
+    pub fn identifier(&self) -> &str {
+        &self.identifier
+    }
+
+    pub fn set_identifier(&mut self, new_identifier: String) {
+        self.identifier = new_identifier;
+    }
+
     fn get(&self, index: usize) -> Option<NormalizedTicks> {
         self.data.get(index).cloned()
     }
@@ -369,7 +386,7 @@ impl TickDataSet {
         let back = self.data.back().and_then(|x| Some(x.tx_ts));
         Some(back?)
     }
-    fn binary_search_timestamp_by_return_range(
+    fn binary_search_timestamp(
         &mut self,
         target_timestamp: TS,
     ) -> Result<Vec<&NormalizedTicks>, Box<dyn Error>> {
@@ -385,29 +402,24 @@ impl TickDataSet {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct NormalizedTicks {
-    pub symbol: String,
-    pub side: Side,
-    pub px: f64,
-    pub qty: f64,
-    pub local_ids: u32,
-    pub server_id: i64,
-    pub tx_ts: TS,
-}
-
 impl LocalDataMethods for TickDataSet {
     type Output = Vec<NormalizedTicks>;
 
     fn get_timestamp_lookback(&self, first_ts: TS) -> Result<Self::Output, Box<dyn Error>> {
         unimplemented!();
     }
+
     fn get_timestamp_window(
         &self,
         first_ts: TS,
         last_ts: TS,
     ) -> Result<Self::Output, Box<dyn Error>> {
-        unimplemented!();
+        Ok(self
+            .data
+            .iter()
+            .filter(|tick| tick.tx_ts >= first_ts && tick.tx_ts <= last_ts)
+            .cloned()
+            .collect())
     }
 }
 
@@ -447,6 +459,17 @@ impl IODataMethods for TickDataSet {
     ) -> Result<Vec<Self::Item>, diesel::result::Error> {
         unimplemented!();
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct NormalizedTicks {
+    pub symbol: String,
+    pub side: Side,
+    pub px: f64,
+    pub qty: f64,
+    pub local_ids: u32,
+    pub server_id: i64,
+    pub tx_ts: TS,
 }
 
 #[derive(Debug, Clone)]
