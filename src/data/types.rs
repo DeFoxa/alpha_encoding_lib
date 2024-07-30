@@ -1,9 +1,9 @@
 use crate::traits::{DataUpdate, IODataMethods, LocalDataMethods};
-use anyhow::{Context, Result};
 use async_trait::async_trait;
 use csv::ReaderBuilder;
 use diesel::sql_types::Timestamp;
 use diesel::PgConnection;
+use eyre::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::de::from_reader;
 use std::{
@@ -13,6 +13,8 @@ use std::{
     ops::Bound::{Included, Unbounded},
 };
 use tokio::{fs::File, io::AsyncReadExt};
+
+//TODO: Throughouly test all search/get methods for expected behavior, especially TickDataSet
 
 // Timestamp
 type TS = i64;
@@ -338,13 +340,13 @@ pub struct TickDataSet {
 }
 
 impl TickDataSet {
-    fn new(identifier: String) -> Self {
+    pub fn new(identifier: String) -> Self {
         TickDataSet {
             identifier,
             data: VecDeque::new(),
         }
     }
-    fn new_with_capacity(identifier: String, capacity: usize) -> Self {
+    pub fn new_with_capacity(identifier: String, capacity: usize) -> Self {
         TickDataSet {
             identifier,
             data: VecDeque::with_capacity(capacity),
@@ -358,62 +360,70 @@ impl TickDataSet {
         self.identifier = new_identifier;
     }
 
-    fn get(&self, index: usize) -> Option<NormalizedTicks> {
+    pub fn get(&self, index: usize) -> Option<NormalizedTicks> {
         self.data.get(index).cloned()
     }
 
-    fn shrink_to_fit(&mut self) {
+    pub fn shrink_to_fit(&mut self) {
         self.data.shrink_to_fit();
     }
 
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.data.len()
     }
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
-    fn truncate(&mut self, len: usize) {
+    pub fn truncate(&mut self, len: usize) {
         //NOTE: shortens keeping first len elements
         self.data.truncate(len);
     }
-    fn sort_by_timestamp(&mut self) {
+    pub fn sort_by_timestamp(&mut self) {
         self.data
             .make_contiguous()
             .sort_by(|a, b| a.tx_ts.cmp(&b.tx_ts));
     }
 
-    fn back_timestamp(&self) -> Option<TS> {
+    pub fn back_timestamp(&self) -> Option<TS> {
         let back = self.data.back().and_then(|x| Some(x.tx_ts));
         Some(back?)
     }
-    fn binary_search_timestamp(
+
+    pub fn binary_search_timestamp_index(
         &mut self,
         target_timestamp: TS,
-    ) -> Result<Vec<&NormalizedTicks>, Box<dyn Error>> {
+    ) -> Result<usize, Box<dyn Error>> {
         self.sort_by_timestamp();
 
         match self
             .data
             .binary_search_by_key(&target_timestamp, |entry| entry.tx_ts)
         {
-            Ok(first) => Ok(self.data.range(0..first).collect::<Vec<_>>()),
+            Ok(index) => Ok(index),
             Err(_) => Err("Binary search TickDataSet Error: TS not found".into()),
         }
     }
-}
 
-impl LocalDataMethods for TickDataSet {
-    type Output = Vec<NormalizedTicks>;
+    // find nearest index, next greater element, if exact match not required
+    pub fn find_nearest_ts_index(&mut self, target_timestamp: TS) -> usize {
+        self.sort_by_timestamp();
 
-    fn get_timestamp_lookback(&self, first_ts: TS) -> Result<Self::Output, Box<dyn Error>> {
-        unimplemented!();
+        match self
+            .data
+            .binary_search_by_key(&target_timestamp, |entry| entry.tx_ts)
+        {
+            Ok(index) => index,
+            Err(index) => index,
+        }
+    }
+    pub fn get_timestamp_lookback(&mut self, first_ts: TS) -> Result<Vec<NormalizedTicks>> {
+        let start_index = self.find_nearest_ts_index(first_ts);
+        let end_index = self.data.len();
+
+        Ok(self.data.range(start_index..end_index).cloned().collect())
     }
 
-    fn get_timestamp_window(
-        &self,
-        first_ts: TS,
-        last_ts: TS,
-    ) -> Result<Self::Output, Box<dyn Error>> {
+    pub fn get_timestamp_window(&self, first_ts: TS, last_ts: TS) -> Result<Vec<NormalizedTicks>> {
         Ok(self
             .data
             .iter()
