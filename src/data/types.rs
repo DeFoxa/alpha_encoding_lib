@@ -416,14 +416,19 @@ impl TickDataSet {
             Err(index) => index,
         }
     }
-    pub fn get_timestamp_lookback(&mut self, first_ts: TS) -> Result<Vec<NormalizedTicks>> {
+
+    pub fn get_data_by_timestamp_lookback(&mut self, first_ts: TS) -> Result<Vec<NormalizedTicks>> {
         let start_index = self.find_nearest_ts_index(first_ts);
         let end_index = self.data.len();
 
         Ok(self.data.range(start_index..end_index).cloned().collect())
     }
 
-    pub fn get_timestamp_window(&self, first_ts: TS, last_ts: TS) -> Result<Vec<NormalizedTicks>> {
+    pub fn get_data_by_timestamp_window(
+        &self,
+        first_ts: TS,
+        last_ts: TS,
+    ) -> Result<Vec<NormalizedTicks>> {
         Ok(self
             .data
             .iter()
