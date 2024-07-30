@@ -436,34 +436,32 @@ impl TickDataSet {
             .cloned()
             .collect())
     }
-}
 
-#[async_trait]
-impl IODataMethods for TickDataSet {
-    type Item = NormalizedTicks;
-
-    async fn from_file_full_dataset(&self, path: &str) -> Result<Vec<Self::Item>, std::io::Error> {
-        unimplemented!();
+    async fn from_file_full_dataset(
+        &self,
+        path: &str,
+    ) -> Result<VecDeque<TickDataSet>, std::io::Error> {
+        todo!();
     }
     async fn from_file_by_ts_lookback(
         &self,
         path: &str,
         last_ts: TS,
-    ) -> Result<Vec<Self::Item>, std::io::Error> {
-        unimplemented!();
+    ) -> Result<VecDeque<TickDataSet>, std::io::Error> {
+        todo!();
     }
     async fn from_file_by_ts_window(
         &self,
         path: &str,
         first_ts: TS,
         last_ts: TS,
-    ) -> Result<Vec<Self::Item>, std::io::Error> {
-        unimplemented!();
+    ) -> Result<VecDeque<TickDataSet>, std::io::Error> {
+        todo!();
     }
     async fn from_db_all_entries(
         &self,
         conn: &PgConnection,
-    ) -> Result<Vec<Self::Item>, diesel::result::Error> {
+    ) -> Result<VecDeque<TickDataSet>, diesel::result::Error> {
         unimplemented!();
     }
     async fn db_ts_window(
@@ -471,7 +469,7 @@ impl IODataMethods for TickDataSet {
         conn: &PgConnection,
         first_ts: TS,
         last_entry: TS,
-    ) -> Result<Vec<Self::Item>, diesel::result::Error> {
+    ) -> Result<VecDeque<TickDataSet>, diesel::result::Error> {
         unimplemented!();
     }
 }
