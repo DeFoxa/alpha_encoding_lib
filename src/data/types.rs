@@ -316,7 +316,7 @@ impl IODataMethods for BookDataSet {
         &self,
         conn: &PgConnection,
     ) -> Result<Vec<Self::Item>, diesel::result::Error> {
-        todo!();
+        unimplemented!();
     }
     async fn db_ts_window(
         &self,
@@ -324,7 +324,7 @@ impl IODataMethods for BookDataSet {
         first_ts: TS,
         last_entry: TS,
     ) -> Result<Vec<Self::Item>, diesel::result::Error> {
-        todo!();
+        unimplemented!();
     }
 }
 
