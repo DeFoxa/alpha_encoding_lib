@@ -3,9 +3,6 @@ use diesel::prelude::*;
 use diesel::PgConnection;
 use std::error;
 
-//TODO: determine if we are going to build bars locally, if so write logic. or only work with
-//normalized data types. Could also write logic to handle both cases, make decision later.
-
 #[derive(Debug)]
 pub struct ExecutionContext {
     data: DataContext,
