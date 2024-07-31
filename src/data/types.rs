@@ -371,13 +371,24 @@ impl TickDataSet {
     pub fn len(&self) -> usize {
         self.data.len()
     }
+
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
+
     pub fn truncate(&mut self, len: usize) {
         //NOTE: shortens keeping first len elements
         self.data.truncate(len);
     }
+
+    pub fn first_timestamp(&self) -> Option<TS> {
+        self.data.front().map(|tick| tick.tx_ts)
+    }
+
+    pub fn last_timestamp(&self) -> Option<TS> {
+        self.data.back().map(|tick| tick.tx_ts)
+    }
+
     pub fn sort_by_timestamp(&mut self) {
         self.data
             .make_contiguous()
