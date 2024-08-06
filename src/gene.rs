@@ -24,7 +24,7 @@ pub enum FunctionData {
 }
 
 #[derive(Debug, Clone)]
-struct FunctionNode {
+pub struct FunctionNode {
     operation: FunctionData,
     operands: Vec<Expression>,
 }
