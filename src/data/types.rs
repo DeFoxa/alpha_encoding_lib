@@ -14,8 +14,6 @@ use std::{
 };
 use tokio::{fs::File, io::AsyncReadExt};
 
-//TODO: Throughouly test all search/get methods for expected behavior, especially TickDataSet
-
 // Timestamp
 type TS = i64;
 
@@ -174,8 +172,7 @@ impl IODataMethods for BarDataSet {
     }
 }
 
-// NOTE: choosing btree for historical book data, due to quick range fetching. Prioritizing ease of use for historical data
-// NOTE: May add another type for real-time ob data where quick insertion/removal are higher priority
+// NOTE: btree for historical book data, may add another type for real-time ob data where quick insertion/removal are higher priority
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Quotes {
@@ -415,7 +412,6 @@ impl TickDataSet {
         }
     }
 
-    // find nearest index, next greater element, if exact match not required
     pub fn find_nearest_ts_index(&mut self, target_timestamp: TS) -> usize {
         self.sort_by_timestamp();
 
@@ -544,3 +540,5 @@ impl AsRef<str> for Side {
         }
     }
 }
+
+//TODO: Throughouly test all search/get methods for expected behavior, especially TickDataSet
